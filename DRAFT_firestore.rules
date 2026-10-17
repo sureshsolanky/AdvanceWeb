@@ -1,0 +1,186 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default Deny Catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Security Primitives
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isBootstrappedAdmin() {
+      return isEmailVerified() && request.auth.token.email == 'expert.ngarh@gmail.com';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        isBootstrappedAdmin() ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Courses Collection
+    function isValidCourse(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 150
+        && data.category is string && data.category.size() > 0 && data.category.size() <= 60
+        && data.description is string && data.description.size() <= 2000
+        && data.duration is string && data.duration.size() <= 60
+        && data.fee is number && data.fee >= 0
+        && (!('discount' in data) || (data.discount is number && data.discount >= 0 && data.discount <= 50))
+        && (!('finalFee' in data) || (data.finalFee is number && data.finalFee >= 0))
+        && (!('branchAvailability' in data) || (data.branchAvailability is list && data.branchAvailability.size() <= 10))
+        && data.active is bool
+        && (!('image' in data) || (data.image is string && data.image.size() <= 500))
+        && (!('admissionNotes' in data) || (data.admissionNotes is string && data.admissionNotes.size() <= 1000))
+        && (!('eligibility' in data) || (data.eligibility is string && data.eligibility.size() <= 200))
+        && (!('isExample' in data) || (data.isExample is bool));
+    }
+
+    match /courses/{courseId} {
+      allow get: if isValidId(courseId);
+      allow list: if true;
+      allow create: if isValidId(courseId) && isAdmin() && isValidCourse(incoming());
+      allow update: if isValidId(courseId) && isAdmin() && isValidCourse(incoming());
+      allow delete: if isValidId(courseId) && isAdmin();
+    }
+
+    // Enquiries Collection
+    function isValidEnquiryData(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 100
+        && data.phone is string && data.phone.size() >= 7 && data.phone.size() <= 20
+        && (!('email' in data) || (data.email is string && data.email.size() <= 120))
+        && data.selectedCourse is string && data.selectedCourse.size() <= 150
+        && data.preferredBranch is string && data.preferredBranch.size() <= 100
+        && (!('message' in data) || (data.message is string && data.message.size() <= 1000))
+        && data.status in ['New', 'Contacted', 'Follow-up', 'Converted', 'Archived'];
+    }
+
+    match /enquiries/{enquiryId} {
+      allow get: if isValidId(enquiryId) && (
+        isAdmin() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid)
+      );
+      // Query enforcement: List only allowed for admins or student's own records
+      allow list: if isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isValidId(enquiryId)
+        && isValidEnquiryData(incoming())
+        && incoming().status == 'New'
+        && (!('adminNotes' in incoming()))
+        && (
+          !('userId' in incoming()) ||
+          (isSignedIn() && incoming().userId == request.auth.uid)
+        );
+      allow update: if isValidId(enquiryId) && isAdmin() && isValidEnquiryData(incoming());
+      allow delete: if isValidId(enquiryId) && isAdmin();
+    }
+
+    // Branches Collection
+    function isValidBranch(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.address is string && data.address.size() > 0 && data.address.size() <= 300
+        && data.phone is string && data.phone.size() > 0 && data.phone.size() <= 20
+        && (!('locality' in data) || (data.locality is string && data.locality.size() <= 150))
+        && (!('timing' in data) || (data.timing is string && data.timing.size() <= 100))
+        && (!('mapQuery' in data) || (data.mapQuery is string && data.mapQuery.size() <= 300))
+        && (!('facilities' in data) || (data.facilities is list && data.facilities.size() <= 15))
+        && (!('isActive' in data) || (data.isActive is bool));
+    }
+
+    match /branches/{branchId} {
+      allow get: if isValidId(branchId);
+      allow list: if true;
+      allow create: if isValidId(branchId) && isAdmin() && isValidBranch(incoming());
+      allow update: if isValidId(branchId) && isAdmin() && isValidBranch(incoming());
+      allow delete: if isValidId(branchId) && isAdmin();
+    }
+
+    // Offers Collection
+    function isValidOffer(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 150
+        && data.discountPercentage is number && data.discountPercentage >= 10 && data.discountPercentage <= 50
+        && data.active is bool
+        && (!('description' in data) || (data.description is string && data.description.size() <= 500))
+        && (!('validTill' in data) || (data.validTill is string && data.validTill.size() <= 50))
+        && (!('terms' in data) || (data.terms is string && data.terms.size() <= 1000))
+        && (!('applicableCategories' in data) || (data.applicableCategories is list && data.applicableCategories.size() <= 10));
+    }
+
+    match /offers/{offerId} {
+      allow get: if isValidId(offerId);
+      allow list: if true;
+      allow create: if isValidId(offerId) && isAdmin() && isValidOffer(incoming());
+      allow update: if isValidId(offerId) && isAdmin() && isValidOffer(incoming());
+      allow delete: if isValidId(offerId) && isAdmin();
+    }
+
+    // Site Settings Collection
+    function isValidSiteSettings(data) {
+      return data.instituteName is string && data.instituteName.size() <= 100
+        && data.phone is string && data.phone.size() <= 20
+        && (!('isWhatsAppEnabled' in data) || (data.isWhatsAppEnabled is bool))
+        && (!('admissionsOpen' in data) || (data.admissionsOpen is bool))
+        && (!('announcement' in data) || (data.announcement is string && data.announcement.size() <= 500));
+    }
+
+    match /siteSettings/{settingsId} {
+      allow get: if isValidId(settingsId);
+      allow list: if true;
+      allow create, update: if isValidId(settingsId) && isAdmin() && isValidSiteSettings(incoming());
+      allow delete: if false; // Settings document should not be deleted
+    }
+
+    // Admins Collection
+    function isValidAdminDoc(data) {
+      return data.email is string && data.email.size() <= 150
+        && data.role in ['admin', 'superadmin'];
+    }
+
+    match /admins/{adminUid} {
+      allow get: if isValidId(adminUid) && isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isValidId(adminUid) && isAdmin() && isValidAdminDoc(incoming());
+      allow delete: if isValidId(adminUid) && isAdmin();
+    }
+
+    // Audit Logs Collection
+    function isValidAuditLog(data) {
+      return data.action is string && data.action.size() <= 100
+        && data.entityType is string && data.entityType.size() <= 50
+        && data.performedBy is string && data.performedBy.size() <= 150
+        && (!('details' in data) || (data.details is string && data.details.size() <= 1000))
+        && (!('entityId' in data) || (data.entityId is string && data.entityId.size() <= 128));
+    }
+
+    match /auditLogs/{logId} {
+      allow get, list: if isValidId(logId) && isAdmin();
+      allow create: if isValidId(logId) && isAdmin() && isValidAuditLog(incoming());
+      allow update, delete: if false; // Audit logs are immutable
+    }
+
+    // Test connection doc for initial boot check
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

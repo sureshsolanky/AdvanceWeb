@@ -1,0 +1,146 @@
+{
+  "entities": {
+    "Course": {
+      "title": "Course",
+      "description": "Educational course or certification program offered by Advance AI Institute",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "eligibility": { "type": "string", "maxLength": 200 },
+        "duration": { "type": "string", "maxLength": 60 },
+        "fee": { "type": "number" },
+        "discount": { "type": "number" },
+        "finalFee": { "type": "number" },
+        "branchAvailability": { "type": "array" },
+        "active": { "type": "boolean" },
+        "image": { "type": "string", "maxLength": 500 },
+        "admissionNotes": { "type": "string", "maxLength": 1000 },
+        "isExample": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "category", "description", "duration", "fee", "active"]
+    },
+    "Enquiry": {
+      "title": "Enquiry",
+      "description": "Student admission application or consultation inquiry",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "email": { "type": "string", "maxLength": 120 },
+        "selectedCourse": { "type": "string", "maxLength": 150 },
+        "preferredBranch": { "type": "string", "maxLength": 100 },
+        "message": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["New", "Contacted", "Follow-up", "Converted", "Archived"] },
+        "userId": { "type": "string", "maxLength": 128 },
+        "adminNotes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "phone", "selectedCourse", "preferredBranch", "status"]
+    },
+    "Branch": {
+      "title": "Branch",
+      "description": "Advance AI Institute physical training center location",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100 },
+        "address": { "type": "string", "maxLength": 300 },
+        "locality": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "timing": { "type": "string", "maxLength": 100 },
+        "facilities": { "type": "array" },
+        "mapQuery": { "type": "string", "maxLength": 300 },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["name", "address", "phone"]
+    },
+    "Offer": {
+      "title": "Offer",
+      "description": "Promotional discounts (10% to 50%) and admission season offers",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 150 },
+        "discountPercentage": { "type": "number" },
+        "description": { "type": "string", "maxLength": 500 },
+        "applicableCategories": { "type": "array" },
+        "validTill": { "type": "string", "maxLength": 50 },
+        "terms": { "type": "string", "maxLength": 1000 },
+        "active": { "type": "boolean" }
+      },
+      "required": ["title", "discountPercentage", "active"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "General website and contact preferences",
+      "type": "object",
+      "properties": {
+        "instituteName": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "isWhatsAppEnabled": { "type": "boolean" },
+        "admissionsOpen": { "type": "boolean" },
+        "announcement": { "type": "string", "maxLength": 500 },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["instituteName", "phone"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Authorized administrator record for role verification",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["admin", "superadmin"] },
+        "addedAt": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    },
+    "AuditLog": {
+      "title": "AuditLog",
+      "description": "Record of administrative operations for auditing",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "maxLength": 100 },
+        "entityType": { "type": "string", "maxLength": 50 },
+        "entityId": { "type": "string", "maxLength": 128 },
+        "details": { "type": "string", "maxLength": 1000 },
+        "performedBy": { "type": "string", "maxLength": 150 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["action", "entityType", "performedBy", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/courses/{courseId}": {
+      "schema": { "$ref": "#/entities/Course" },
+      "description": "Course catalog documents viewable by public and editable by admins"
+    },
+    "/enquiries/{enquiryId}": {
+      "schema": { "$ref": "#/entities/Enquiry" },
+      "description": "Student admission enquiries submitted publicly or by students, managed by admins"
+    },
+    "/branches/{branchId}": {
+      "schema": { "$ref": "#/entities/Branch" },
+      "description": "Institute physical branch location details"
+    },
+    "/offers/{offerId}": {
+      "schema": { "$ref": "#/entities/Offer" },
+      "description": "Configured promotional discounts and admissions offers"
+    },
+    "/siteSettings/{settingsId}": {
+      "schema": { "$ref": "#/entities/SiteSettings" },
+      "description": "Global website configuration and contact status"
+    },
+    "/admins/{adminUid}": {
+      "schema": { "$ref": "#/entities/Admin" },
+      "description": "System admin verification documents"
+    },
+    "/auditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AuditLog" },
+      "description": "Administrative audit trial records"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Advance AI Institute",
+  "description": "Premier computer, AI, and professional training institute offering specialized diploma, certification, and university correspondence programs across Najafgarh branches.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
